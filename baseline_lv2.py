@@ -37,7 +37,7 @@ class KeyboardPlayerPyGame(Player):
         super(KeyboardPlayerPyGame, self).__init__()
         # self.tree = None
         # Variables for reading exploration data
-        self.save_dir = "data/images_subsample/"
+        self.save_dir = "data/Images/"
         if not os.path.exists(self.save_dir):
             print(f"Directory {self.save_dir} does not exist, please download exploration data.")
 
@@ -259,7 +259,8 @@ class KeyboardPlayerPyGame(Player):
         if self.codebook is None:
             print("Computing codebook...")
             # Use fewer clusters for BoVW as it works better with a smaller vocabulary
-            # self.codebook = KMeans(n_clusters=128, init='k-means++', n_init=5, verbose=1).fit(self.orb_descriptors)
+            self.codebook = KMeans(n_clusters=128, init='k-means++', n_init=5, verbose=1).fit(self.orb_descriptors)
+            """ Did not use minibatch kmeans since there was enough time for full kmeans
             self.codebook = MiniBatchKMeans(
                 n_clusters=128,
                 init='k-means++',
@@ -268,6 +269,7 @@ class KeyboardPlayerPyGame(Player):
                 max_iter=100,     # 减少最大迭代次数
                 verbose=1
             ).fit(self.orb_descriptors)
+             """
             pickle.dump(self.codebook, open("codebook_orb.pkl", "wb"))
         else:
             print("Loaded codebook from codebook_orb.pkl")
@@ -414,10 +416,9 @@ class KeyboardPlayerPyGame(Player):
                     self.display_next_best_view()
                 if keys[pygame.K_m]:
                     current_index = self.get_neighbor(self.fpv)
-                    current_index *= 5    # To account for subsampled images
-                    shutil.copy(f"data/images/{current_index}.jpg", "current_view_match.jpg")    # Be able to tell if current match is good
+                    shutil.copy(os.path.join(self.save_dir, f"{current_index}.jpg"), "current_view_match.jpg")    # Be able to tell if current match is good
                     fig_traj = render_traj(self.pos_hist, self.heading_hist, visible=(current_index, current_index + 1), figsize=(4, 4))
-                    fig_traj.gca().scatter(*self.pos_hist[self.goal * 5])    # goal * 5 to account for subsampled images
+                    fig_traj.gca().scatter(*self.pos_hist[self.goal])
                     fig_traj.draw(fig_traj.canvas.get_renderer())
                     arr_fig = np.frombuffer(fig_traj.canvas.tostring_argb(), dtype=np.uint8)
                     arr_fig = arr_fig.reshape(fig_traj.canvas.get_width_height()[::-1] + (4,))

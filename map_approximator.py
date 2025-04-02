@@ -56,15 +56,22 @@ def execute_bulk_actions(actions_fpath):
     curr_pos = np.array([0, 0], dtype=float)
     heading_hist, pos_hist = [curr_heading], [curr_pos]
 
-    for step_actions in all_actions:
+    step_i = 0
+    while step_i < len(all_actions):
+        step_actions = all_actions[step_i]
+        # Manually skip a collision part in midterm's exploration data
+        if step_i == 7104:
+            curr_heading += 85
+            step_i = 7147
         # Treat combined translation and rotation actions as a curve, and break down the curve into small line segments
-        if len(step_actions) > 1 and len(set(step_actions).difference(MOVEMENT_ACTS)) == 0:
-            curve_acts = [step_actions[step_i] for _ in range(CURVE_PARTS) for step_i in range(len(step_actions))]
+        elif "|" in step_actions[0] and len(set(step_indiv := step_actions[0].split("|")).difference(MOVEMENT_ACTS)) == 0:
+            curve_acts = [step_indiv[step_i] for _ in range(CURVE_PARTS) for step_i in range(len(step_indiv))]
             curr_heading, curr_pos = execute_actions(curr_heading, curr_pos, curve_acts, T_DIST / CURVE_PARTS, R_ANG / CURVE_PARTS)
         else:
             curr_heading, curr_pos = execute_actions(curr_heading, curr_pos, step_actions)
         heading_hist.append(curr_heading)
         pos_hist.append(curr_pos)
+        step_i += 1
     return pos_hist, heading_hist
 
 
