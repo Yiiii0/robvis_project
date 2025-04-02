@@ -1,0 +1,6 @@
+data/
+exploration_trajectory/
+*.npy
+*.pkl
+codebook_orb.pkl
+knn_graph.pkl
