@@ -16,6 +16,7 @@ import networkx as nx
 from scipy.spatial import distance
 import joblib
 from collections import Counter
+from sklearn.cluster import MiniBatchKMeans
 
 
 import logging
@@ -253,7 +254,15 @@ class KeyboardPlayerPyGame(Player):
         if self.codebook is None:
             print("Computing codebook...")
             # Use fewer clusters for BoVW as it works better with a smaller vocabulary
-            self.codebook = KMeans(n_clusters=128, init='k-means++', n_init=5, verbose=1).fit(self.orb_descriptors)
+            # self.codebook = KMeans(n_clusters=128, init='k-means++', n_init=5, verbose=1).fit(self.orb_descriptors)
+            self.codebook = MiniBatchKMeans(
+                n_clusters=128,
+                init='k-means++',
+                batch_size=1000,  # 每批处理的样本数
+                n_init=3,         # 减少重复运行次数
+                max_iter=100,     # 减少最大迭代次数
+                verbose=1
+            ).fit(self.orb_descriptors)
             pickle.dump(self.codebook, open("codebook_orb.pkl", "wb"))
         else:
             print("Loaded codebook from codebook_orb.pkl")
