@@ -9,6 +9,7 @@ import pickle
 from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
 from tqdm import tqdm
+from matplotlib import pyplot as plt
 from natsort import natsorted
 
 # Current Changes:
@@ -18,6 +19,7 @@ import joblib
 from collections import Counter
 from sklearn.cluster import MiniBatchKMeans
 
+from map_approximator import execute_bulk_actions, render_traj
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
@@ -59,6 +61,8 @@ class KeyboardPlayerPyGame(Player):
                 self.G = pickle.load(f)
         # Initialize goal location
         self.goal = None
+        self.pos_hist = None
+        self.heading_hist = None
         
 
     def reset(self):
@@ -314,6 +318,8 @@ class KeyboardPlayerPyGame(Player):
         tree = BallTree(self.database, leaf_size=64)
         self.tree = tree 
 
+        # Generate position and heading histories
+        self.pos_hist, self.heading_hist = execute_bulk_actions(os.path.join("data", "data_info.json"))
 
     def pre_navigation(self):
         """
@@ -405,6 +411,16 @@ class KeyboardPlayerPyGame(Player):
                 # If 'q' key is pressed, then display the next best view based on the current FPV
                 if keys[pygame.K_q]:
                     self.display_next_best_view()
+                if keys[pygame.K_m]:
+                    current_index = self.get_neighbor(self.fpv)
+                    fig_traj = render_traj(self.pos_hist, self.heading_hist, visible=(current_index, current_index + 1), figsize=(4, 4))
+                    fig_traj.gca().scatter(*self.pos_hist[self.goal])
+                    fig_traj.draw(fig_traj.canvas.get_renderer())
+                    arr_fig = np.frombuffer(fig_traj.canvas.tostring_argb(), dtype=np.uint8)
+                    arr_fig = arr_fig.reshape(fig_traj.canvas.get_width_height()[::-1] + (4,))
+                    plt.close(fig_traj)
+                    cv2.imshow("traj loc", arr_fig)
+                    cv2.waitKey(1)
 
         # Display the first-person view image on the pygame screen
         rgb = convert_opencv_img_to_pygame(fpv)
@@ -413,6 +429,8 @@ class KeyboardPlayerPyGame(Player):
 
 
 if __name__ == "__main__":
+    import matplotlib
     import vis_nav_game
+    matplotlib.use("agg")
     # Start the game with the KeyboardPlayerPyGame player
     vis_nav_game.play(the_player=KeyboardPlayerPyGame())

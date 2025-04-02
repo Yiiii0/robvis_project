@@ -1,5 +1,6 @@
 data/
 exploration_trajectory/
+exploration_data
 *.npy
 *.pkl
 codebook_orb.pkl
