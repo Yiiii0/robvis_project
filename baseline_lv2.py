@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import os
 import pickle
+import shutil
 from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
 from tqdm import tqdm
@@ -413,8 +414,10 @@ class KeyboardPlayerPyGame(Player):
                     self.display_next_best_view()
                 if keys[pygame.K_m]:
                     current_index = self.get_neighbor(self.fpv)
+                    current_index *= 5    # To account for subsampled images
+                    shutil.copy(f"data/images/{current_index}.jpg", "current_view_match.jpg")    # Be able to tell if current match is good
                     fig_traj = render_traj(self.pos_hist, self.heading_hist, visible=(current_index, current_index + 1), figsize=(4, 4))
-                    fig_traj.gca().scatter(*self.pos_hist[self.goal])
+                    fig_traj.gca().scatter(*self.pos_hist[self.goal * 5])    # goal * 5 to account for subsampled images
                     fig_traj.draw(fig_traj.canvas.get_renderer())
                     arr_fig = np.frombuffer(fig_traj.canvas.tostring_argb(), dtype=np.uint8)
                     arr_fig = arr_fig.reshape(fig_traj.canvas.get_width_height()[::-1] + (4,))
