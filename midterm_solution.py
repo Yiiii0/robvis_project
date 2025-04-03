@@ -53,13 +53,6 @@ class KeyboardPlayerPyGame(Player):
         if os.path.exists("BoVW_database.pkl"):
             self.database = pickle.load(open("BoVW_database.pkl", "rb"))
         
-        # G - graph
-        self.G = None
-        # Load knn graph
-        if os.path.exists("knn_graph.pkl"):
-            print("Loading precomputed graph...")
-            with open("knn_graph.pkl", "rb") as f:
-                self.G = pickle.load(f)
         # Initialize goal location
         self.goal = None
         self.pos_hist = None
@@ -287,35 +280,6 @@ class KeyboardPlayerPyGame(Player):
                 pickle.dump(self.database, f)
             print("BoVW database is saved")
             
-        if self.G is None:
-            # Initialize graph
-            self.G = nx.Graph()
-            # Adding nodes to the graph based on the BoVWs
-            for i in range(len(self.database)):
-                self.G.add_node(i)
-            
-            # Computing distances 
-            for i in tqdm(range(len(self.database)), desc="Computing distances..."):
-                node_dist = []
-                for j in range(len(self.database)):
-                    if i!=j:
-                        # For BoVW, we can use chi-square distance as it's better for histograms
-                        # but Euclidean also works well
-                        d = distance.euclidean(self.database[i], self.database[j]) 
-                        node_dist.append((j, d))
-
-                # Select the K-nearest neighbours 
-                node_dist = sorted(node_dist, key=lambda x:x[1])[:10]
-
-                # Adding weighted edges to the graph
-                for neighbour, dist in node_dist:
-                    self.G.add_edge(i, neighbour, weight=dist)
-            
-            # Save the graph to avoid recomputation during each run
-            with open("knn_graph.pkl", "wb") as f:
-                pickle.dump(self.G, f)
-            print("Graph saved successfully!")
-            
         # Build BallTree with BoVW features
         print("Building BallTree...")
         tree = BallTree(self.database, leaf_size=64)
@@ -330,33 +294,6 @@ class KeyboardPlayerPyGame(Player):
         """
         super(KeyboardPlayerPyGame, self).pre_navigation()
         self.pre_nav_compute()
-        
-    def display_next_best_view(self):
-        """
-        Display the next best view based on the current first-person view
-        """
-        # Get the neighbor of current FPV
-        # In other words, get the image from the database that closely matches current FPV
-        current_index = self.get_neighbor(self.fpv)
-
-        try:
-            # Find the shortest path from the current position to the goal
-            path = nx.astar_path(self.G, current_index, self.goal, weight="weight")
-        except nx.NetworkXNoPath:
-            print("No valid path found to the goal! Improve your algorithm!")
-            return
-        
-        if len(path)>1:
-            # Obtain adjacent nodes that are potential paths
-            possible_views = list(self.G.neighbors(current_index))
-
-            # Score the best view (Prioritize the ones that lead to the goal)
-            next_best_view = min(possible_views, key=lambda view: nx.shortest_path_length(self.G, view, self.goal, weight="weight", method="dijkstra"))
-
-            # Display the next best view
-            self.display_img_from_id(next_best_view, "Next Best view")
-            print(f'Next View ID: {current_index} || Goal ID: {self.goal}')
-
 
     def see(self, fpv):
         """
@@ -411,9 +348,6 @@ class KeyboardPlayerPyGame(Player):
                                 
                 # Key the state of the keys
                 keys = pygame.key.get_pressed()
-                # If 'q' key is pressed, then display the next best view based on the current FPV
-                if keys[pygame.K_q]:
-                    self.display_next_best_view()
                 if keys[pygame.K_m]:
                     current_index = self.get_neighbor(self.fpv)
                     shutil.copy(os.path.join(self.save_dir, f"{current_index}.jpg"), "current_view_match.jpg")    # Be able to tell if current match is good
