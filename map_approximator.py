@@ -59,12 +59,33 @@ def execute_bulk_actions(actions_fpath):
     step_i = 0
     while step_i < len(all_actions):
         step_actions = all_actions[step_i]
-        # Manually skip a collision part in midterm's exploration data
-        if step_i == 7104:
-            curr_heading += 85
-            step_i = 7147
+        old_step_i = step_i
+        if step_i == 5200:
+            curr_heading = -180
+        if step_i == 6077:
+            curr_heading = 175
+        if step_i == 12222:
+            step_i = 12304
+        if step_i == 12645:
+            curr_heading = 90
+            step_i = 12701
+        if step_i == 13710:
+            curr_heading = 0
+            step_i = 13750
+        if step_i == 13782:
+            curr_heading = 90
+            step_i = 13826
+        if step_i == 14810:
+            curr_heading = -90
+            step_i = 14853
+        if step_i == 15465:
+            curr_heading = 180
+            step_i = 15485
+        if step_i > old_step_i:
+            heading_hist.extend([curr_heading for _ in range(step_i - old_step_i)])
+            pos_hist.extend([curr_pos for _ in range(step_i - old_step_i)])
         # Treat combined translation and rotation actions as a curve, and break down the curve into small line segments
-        elif "|" in step_actions[0] and len(set(step_indiv := step_actions[0].split("|")).difference(MOVEMENT_ACTS)) == 0:
+        if "|" in step_actions[0] and len(set(step_indiv := step_actions[0].split("|")).difference(MOVEMENT_ACTS)) == 0:
             curve_acts = [step_indiv[step_i] for _ in range(CURVE_PARTS) for step_i in range(len(step_indiv))]
             curr_heading, curr_pos = execute_actions(curr_heading, curr_pos, curve_acts, T_DIST / CURVE_PARTS, R_ANG / CURVE_PARTS)
         else:
@@ -80,9 +101,10 @@ if __name__ == "__main__":
 
     pos_hist, heading_hist = execute_bulk_actions("exploration_data/data_info.json")
     assert len(pos_hist) == len(heading_hist)
+    print(f"In total {len(pos_hist)} moves")
 
     os.makedirs(TRAJ_DIR, exist_ok=True)
-    for step_i in tqdm(range(len(pos_hist))):
+    for step_i in tqdm(range(0, len(pos_hist), 20)):
         traj_fig = render_traj(pos_hist[:step_i + 1], heading_hist[:step_i + 1])
         traj_fig.savefig(os.path.join(TRAJ_DIR, f"{str(step_i).zfill(len(str(len(pos_hist))))}.png"))
         plt.close()
